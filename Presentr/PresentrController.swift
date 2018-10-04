@@ -10,7 +10,7 @@ import UIKit
 
 /// Presentr's custom presentation controller. Handles the position and sizing for the view controller's.
 class PresentrController: UIPresentationController, UIAdaptivePresentationControllerDelegate {
-    
+
     /// Presentation type must be passed in to make all the sizing and position decisions.
     let presentationType: PresentationType
 
@@ -25,7 +25,7 @@ class PresentrController: UIPresentationController, UIAdaptivePresentationContro
 
     /// DismissSwipe direction
     let dismissOnSwipeDirection: DismissSwipeDirection
-    
+
     /// Should the presented controller use animation when dismiss on background tap.
     let dismissAnimated: Bool
 
@@ -126,11 +126,11 @@ class PresentrController: UIPresentationController, UIAdaptivePresentationContro
         self.customBackgroundView = customBackgroundView
 
         super.init(presentedViewController: presentedViewController, presenting: presentingViewController)
-        
+
         setupBackground(backgroundColor, backgroundOpacity: backgroundOpacity, blurBackground: blurBackground, blurStyle: blurStyle)
         setupCornerRadius(roundCorners: roundCorners, cornerRadius: cornerRadius)
         addDropShadow(shadow: dropShadow)
-        
+
         if dismissOnSwipe {
             setupDismissOnSwipe()
         }
@@ -146,7 +146,7 @@ class PresentrController: UIPresentationController, UIAdaptivePresentationContro
         let swipe = UIPanGestureRecognizer(target: self, action: #selector(presentedViewSwipe))
         presentedViewController.view.addGestureRecognizer(swipe)
     }
-    
+
     private func setupBackground(_ backgroundColor: UIColor, backgroundOpacity: Float, blurBackground: Bool, blurStyle: UIBlurEffect.Style) {
         let tap = UITapGestureRecognizer(target: self, action: #selector(chromeViewTapped))
         chromeView.addGestureRecognizer(tap)
@@ -168,20 +168,25 @@ class PresentrController: UIPresentationController, UIAdaptivePresentationContro
 
         if shouldRoundCorners {
             presentedViewController.view.layer.cornerRadius = cornerRadius
+            presentedViewController.view.layer.masksToBounds = true
         } else {
             presentedViewController.view.layer.cornerRadius = 0
+            presentedViewController.view.layer.masksToBounds = false
         }
 
 		if let settable = presentedViewController as? CornerRadiusSettable {
 			settable.customContainerViewSetCornerRadius(cornerRadius)
 		}
     }
-    
+
     private func addDropShadow(shadow: PresentrShadow?) {
         guard let shadow = shadow else {
             presentedViewController.view.layer.shadowOpacity = 0
+            presentedViewController.view.layer.masksToBounds = true
             return
         }
+
+        presentedViewController.view.layer.masksToBounds = false
 
         if let shadowColor = shadow.shadowColor?.cgColor {
             presentedViewController.view.layer.shadowColor = shadowColor
@@ -199,12 +204,12 @@ class PresentrController: UIPresentationController, UIAdaptivePresentationContro
             presentedViewController.view.layer.shadowRadius = shadowRadius
         }
     }
-    
+
     fileprivate func registerKeyboardObserver() {
         NotificationCenter.default.addObserver(self, selector: #selector(PresentrController.keyboardWasShown(notification:)), name: UIResponder.keyboardWillShowNotification, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(PresentrController.keyboardWillHide(notification:)), name: UIResponder.keyboardWillHideNotification, object: nil)
     }
-    
+
     fileprivate func removeObservers() {
         NotificationCenter.default.removeObserver(self, name: UIResponder.keyboardWillShowNotification, object: nil)
         NotificationCenter.default.removeObserver(self, name: UIResponder.keyboardWillHideNotification, object: nil)
@@ -215,14 +220,14 @@ class PresentrController: UIPresentationController, UIAdaptivePresentationContro
 // MARK: - UIPresentationController
 
 extension PresentrController {
-    
+
     // MARK: Presentation
-    
+
     override var frameOfPresentedViewInContainerView: CGRect {
         var presentedViewFrame = CGRect.zero
         let containerBounds = containerFrame
         let size = self.size(forChildContentContainer: presentedViewController, withParentContainerSize: containerBounds.size)
-        
+
         let origin: CGPoint
         // If the Presentation Type's calculate center point returns nil
         // this means that the user provided the origin, not a center point.
@@ -231,19 +236,19 @@ extension PresentrController {
         } else {
             origin = getOriginFromType() ?? CGPoint(x: 0, y: 0)
         }
-        
+
         presentedViewFrame.size = size
         presentedViewFrame.origin = origin
 
         return presentedViewFrame
     }
-    
+
     override func size(forChildContentContainer container: UIContentContainer, withParentContainerSize parentSize: CGSize) -> CGSize {
         let width = getWidthFromType(parentSize)
         let height = getHeightFromType(parentSize)
         return CGSize(width: CGFloat(width), height: CGFloat(height))
     }
-    
+
     override func containerViewWillLayoutSubviews() {
         guard !keyboardIsShowing else {
             return // prevent resetting of presented frame when the frame is being translated
@@ -252,9 +257,9 @@ extension PresentrController {
         chromeView.frame = containerFrame
         presentedView!.frame = frameOfPresentedViewInContainerView
     }
-    
+
     // MARK: Animation
-    
+
     override func presentationTransitionWillBegin() {
         guard let containerView = containerView else {
             return
@@ -301,7 +306,7 @@ extension PresentrController {
             self.chromeView.alpha = 1.0
         }, completion: nil)
     }
-    
+
     override func dismissalTransitionWillBegin() {
         guard let coordinator = presentedViewController.transitionCoordinator else {
             chromeView.alpha = 0.0
@@ -357,7 +362,7 @@ fileprivate extension PresentrController {
         let y: CGFloat = center.y - size.height / 2
         return CGPoint(x: x, y: y)
     }
-    
+
 }
 
 // MARK: - Gesture Handling
